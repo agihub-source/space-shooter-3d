@@ -2,19 +2,26 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>🚀 Space Shooter 3D</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
         }
         
         body {
             overflow: hidden;
             background: #000;
             font-family: 'Segoe UI', Arial, sans-serif;
+            position: fixed;
+            width: 100%;
+            height: 100%;
         }
         
         #game-container {
@@ -27,29 +34,29 @@
         
         #ui {
             position: fixed;
-            top: 20px;
-            left: 20px;
+            top: 10px;
+            left: 10px;
             color: #fff;
             z-index: 100;
             text-shadow: 0 0 10px rgba(0, 255, 255, 0.8);
         }
         
         #score {
-            font-size: 24px;
-            margin-bottom: 10px;
+            font-size: 18px;
+            margin-bottom: 5px;
         }
         
         #health {
-            font-size: 18px;
+            font-size: 14px;
         }
         
         .health-bar {
-            width: 200px;
-            height: 20px;
+            width: 120px;
+            height: 15px;
             background: rgba(255, 255, 255, 0.2);
-            border-radius: 10px;
+            border-radius: 8px;
             overflow: hidden;
-            margin-top: 5px;
+            margin-top: 3px;
         }
         
         .health-fill {
@@ -58,42 +65,85 @@
             transition: width 0.3s;
         }
         
-        #crosshair {
+        /* 移动端虚拟控制器 */
+        #mobile-controls {
             position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 30px;
-            height: 30px;
-            border: 2px solid rgba(0, 255, 255, 0.8);
-            border-radius: 50%;
-            pointer-events: none;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 200px;
             z-index: 100;
+            pointer-events: none;
+            display: none;
         }
         
-        #crosshair::before,
-        #crosshair::after {
-            content: '';
+        /* 左侧摇杆区域 */
+        #joystick-area {
             position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 120px;
+            height: 120px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(0, 255, 255, 0.5);
+            border-radius: 50%;
+            pointer-events: auto;
+        }
+        
+        #joystick-thumb {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
             background: rgba(0, 255, 255, 0.8);
+            border-radius: 50%;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.5);
         }
         
-        #crosshair::before {
-            width: 10px;
-            height: 2px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        /* 右侧按钮区域 */
+        #buttons-area {
+            position: absolute;
+            right: 20px;
+            bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto;
         }
         
-        #crosshair::after {
-            width: 2px;
-            height: 10px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+        .control-btn {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #fff;
+            pointer-events: auto;
+            transition: all 0.1s;
         }
         
+        .control-btn:active {
+            transform: scale(0.9);
+        }
+        
+        #fire-btn {
+            background: rgba(255, 0, 100, 0.3);
+            border-color: #ff0064;
+            box-shadow: 0 0 20px rgba(255, 0, 100, 0.5);
+        }
+        
+        #fire-btn:active {
+            background: rgba(255, 0, 100, 0.6);
+            box-shadow: 0 0 30px rgba(255, 0, 100, 0.8);
+        }
+        
+        /* 开始界面 */
         #start-screen {
             position: fixed;
             top: 0;
@@ -106,13 +156,15 @@
             align-items: center;
             justify-content: center;
             z-index: 200;
+            padding: 20px;
         }
         
         #start-screen h1 {
-            font-size: 48px;
+            font-size: 32px;
             color: #fff;
             text-shadow: 0 0 30px #0ff, 0 0 60px #0ff;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
+            text-align: center;
             animation: glow 2s ease-in-out infinite;
         }
         
@@ -123,8 +175,9 @@
         
         #start-screen p {
             color: #888;
-            font-size: 18px;
-            margin-bottom: 40px;
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: center;
         }
         
         #start-btn {
@@ -140,22 +193,22 @@
             box-shadow: 0 0 30px rgba(0, 229, 255, 0.5);
         }
         
-        #start-btn:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 50px rgba(0, 229, 255, 0.8);
+        #start-btn:active {
+            transform: scale(0.95);
         }
         
-        .controls {
-            margin-top: 40px;
+        .controls-info {
+            margin-top: 30px;
             color: #666;
             text-align: center;
-        }
-        
-        .controls p {
-            margin: 5px 0;
             font-size: 14px;
         }
         
+        .controls-info p {
+            margin: 5px 0;
+        }
+        
+        /* 游戏结束界面 */
         #game-over {
             position: fixed;
             top: 0;
@@ -171,35 +224,62 @@
         }
         
         #game-over h1 {
-            font-size: 48px;
+            font-size: 36px;
             color: #f44336;
-            margin-bottom: 20px;
+            margin-bottom: 15px;
         }
         
         #game-over p {
             color: #fff;
-            font-size: 24px;
-            margin-bottom: 30px;
+            font-size: 20px;
+            margin-bottom: 25px;
         }
         
         #restart-btn {
             padding: 15px 50px;
-            font-size: 20px;
+            font-size: 18px;
             background: linear-gradient(90deg, #f44336, #ff5722);
             border: none;
             border-radius: 30px;
             color: #fff;
             font-weight: bold;
             cursor: pointer;
-            transition: all 0.3s;
-        }
-        
-        #restart-btn:hover {
-            transform: scale(1.1);
         }
         
         .hidden {
             display: none !important;
+        }
+        
+        /* 移动端适配 */
+        @media (max-width: 768px) {
+            #mobile-controls {
+                display: block;
+            }
+            
+            #score {
+                font-size: 16px;
+            }
+            
+            .health-bar {
+                width: 100px;
+                height: 12px;
+            }
+            
+            #start-screen h1 {
+                font-size: 28px;
+            }
+            
+            .control-btn {
+                width: 65px;
+                height: 65px;
+                font-size: 20px;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            #mobile-controls {
+                display: none;
+            }
         }
     </style>
 </head>
@@ -216,17 +296,23 @@
         </div>
     </div>
     
-    <div id="crosshair"></div>
+    <!-- 移动端虚拟控制器 -->
+    <div id="mobile-controls">
+        <div id="joystick-area">
+            <div id="joystick-thumb"></div>
+        </div>
+        <div id="buttons-area">
+            <div id="fire-btn" class="control-btn">🔥</div>
+        </div>
+    </div>
     
     <div id="start-screen">
         <h1>🚀 Space Shooter 3D</h1>
         <p>在太空中消灭敌人！</p>
         <button id="start-btn">开始游戏</button>
-        <div class="controls">
-            <p>🎮 WASD / 方向键 - 移动</p>
-            <p>🖱️ 鼠标移动 - 瞄准</p>
-            <p>🔫 点击 / 空格 - 射击</p>
-            <p>🔄 Q/E - 翻滚</p>
+        <div class="controls-info">
+            <p>📱 移动端：左侧摇杆移动，右侧按钮射击</p>
+            <p>💻 电脑端：WASD移动，鼠标瞄准，点击射击</p>
         </div>
     </div>
     
@@ -249,6 +335,13 @@
         // 控制变量
         const keys = {};
         const mouse = { x: 0, y: 0 };
+        const joystick = { x: 0, y: 0, active: false };
+        let autoFire = false;
+        let lastFireTime = 0;
+        const fireInterval = 150; // 自动射击间隔
+        
+        // 移动端检测
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
         
         // 初始化 Three.js
         function init() {
@@ -264,7 +357,7 @@
             // 渲染器
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.setClearColor(0x000011);
             document.getElementById('game-container').appendChild(renderer.domElement);
             
@@ -276,33 +369,107 @@
             directionalLight.position.set(0, 50, 50);
             scene.add(directionalLight);
             
-            const pointLight = new THREE.PointLight(0x00ffff, 1, 100);
-            pointLight.position.set(0, 0, 0);
-            scene.add(pointLight);
-            
             // 创建玩家飞船
             createPlayer();
             
             // 创建星空背景
             createStarfield();
             
-            // 事件监听
+            // 事件监听 - 键盘
             document.addEventListener('keydown', e => keys[e.code] = true);
             document.addEventListener('keyup', e => keys[e.code] = false);
+            
+            // 事件监听 - 鼠标
             document.addEventListener('mousemove', onMouseMove);
             document.addEventListener('click', shoot);
             document.addEventListener('keydown', e => {
                 if (e.code === 'Space') shoot();
             });
             
+            // 事件监听 - 触摸
+            setupTouchControls();
+            
             window.addEventListener('resize', onWindowResize);
             
-            // 开始按钮
+            // 按钮
             document.getElementById('start-btn').addEventListener('click', startGame);
             document.getElementById('restart-btn').addEventListener('click', restartGame);
             
             // 开始渲染循环
             animate();
+        }
+        
+        function setupTouchControls() {
+            const joystickArea = document.getElementById('joystick-area');
+            const joystickThumb = document.getElementById('joystick-thumb');
+            const fireBtn = document.getElementById('fire-btn');
+            
+            let joystickCenter = { x: 0, y: 0 };
+            let touchId = null;
+            
+            // 摇杆控制
+            joystickArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.changedTouches[0];
+                const rect = joystickArea.getBoundingClientRect();
+                joystickCenter = {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+                joystick.active = true;
+                touchId = touch.identifier;
+                updateJoystick(touch);
+            });
+            
+            joystickArea.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === touchId) {
+                        updateJoystick(touch);
+                    }
+                }
+            });
+            
+            joystickArea.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                for (let touch of e.changedTouches) {
+                    if (touch.identifier === touchId) {
+                        joystick.active = false;
+                        joystick.x = 0;
+                        joystick.y = 0;
+                        joystickThumb.style.transform = 'translate(-50%, -50%)';
+                        touchId = null;
+                    }
+                }
+            });
+            
+            function updateJoystick(touch) {
+                const maxDistance = 40;
+                let dx = touch.clientX - joystickCenter.x;
+                let dy = touch.clientY - joystickCenter.y;
+                
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                if (distance > maxDistance) {
+                    dx = dx / distance * maxDistance;
+                    dy = dy / distance * maxDistance;
+                }
+                
+                joystick.x = dx / maxDistance;
+                joystick.y = dy / maxDistance;
+                
+                joystickThumb.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
+            }
+            
+            // 射击按钮
+            fireBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                autoFire = true;
+            });
+            
+            fireBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                autoFire = false;
+            });
         }
         
         function createPlayer() {
@@ -343,7 +510,7 @@
         
         function createStarfield() {
             const starGeometry = new THREE.BufferGeometry();
-            const starCount = 5000;
+            const starCount = 3000;
             const positions = new Float32Array(starCount * 3);
             
             for (let i = 0; i < starCount * 3; i += 3) {
@@ -356,7 +523,7 @@
             
             const starMaterial = new THREE.PointsMaterial({
                 color: 0xffffff,
-                size: 1,
+                size: 1.5,
                 sizeAttenuation: true
             });
             
@@ -374,15 +541,15 @@
             const enemy = new THREE.Mesh(geometry, material);
             
             enemy.position.set(
-                (Math.random() - 0.5) * 100,
-                (Math.random() - 0.5) * 50,
-                -200 - Math.random() * 200
+                (Math.random() - 0.5) * 80,
+                (Math.random() - 0.5) * 40,
+                -200 - Math.random() * 100
             );
             
             enemy.velocity = new THREE.Vector3(
-                (Math.random() - 0.5) * 0.5,
-                (Math.random() - 0.5) * 0.5,
-                1 + Math.random() * 0.5
+                (Math.random() - 0.5) * 0.3,
+                (Math.random() - 0.5) * 0.3,
+                0.8 + Math.random() * 0.3
             );
             
             enemy.rotationSpeed = Math.random() * 0.1;
@@ -394,7 +561,11 @@
         function shoot() {
             if (!gameStarted || gameOver) return;
             
-            const bulletGeometry = new THREE.SphereGeometry(0.3);
+            const now = Date.now();
+            if (now - lastFireTime < fireInterval) return;
+            lastFireTime = now;
+            
+            const bulletGeometry = new THREE.SphereGeometry(0.4);
             const bulletMaterial = new THREE.MeshBasicMaterial({
                 color: 0x00ff00,
                 transparent: true,
@@ -405,8 +576,7 @@
             bullet.position.copy(player.position);
             bullet.velocity = new THREE.Vector3(0, 0, -5);
             
-            // 添加光芒效果
-            const glowGeometry = new THREE.SphereGeometry(0.5);
+            const glowGeometry = new THREE.SphereGeometry(0.6);
             const glowMaterial = new THREE.MeshBasicMaterial({
                 color: 0x00ff00,
                 transparent: true,
@@ -420,7 +590,7 @@
         }
         
         function createExplosion(position) {
-            const particleCount = 20;
+            const particleCount = 15;
             for (let i = 0; i < particleCount; i++) {
                 const geometry = new THREE.SphereGeometry(0.3);
                 const material = new THREE.MeshBasicMaterial({
@@ -442,6 +612,7 @@
         }
         
         function onMouseMove(event) {
+            if (isMobile) return;
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         }
@@ -455,25 +626,34 @@
         function updatePlayer() {
             if (!gameStarted || gameOver) return;
             
-            const speed = 0.5;
+            const speed = 0.6;
             
-            // 移动
-            if (keys['KeyW'] || keys['ArrowUp']) player.position.y += speed;
-            if (keys['KeyS'] || keys['ArrowDown']) player.position.y -= speed;
-            if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= speed;
-            if (keys['KeyD'] || keys['ArrowRight']) player.position.x += speed;
+            // 键盘控制（桌面端）
+            if (!isMobile) {
+                if (keys['KeyW'] || keys['ArrowUp']) player.position.y += speed;
+                if (keys['KeyS'] || keys['ArrowDown']) player.position.y -= speed;
+                if (keys['KeyA'] || keys['ArrowLeft']) player.position.x -= speed;
+                if (keys['KeyD'] || keys['ArrowRight']) player.position.x += speed;
+                
+                // 鼠标瞄准
+                player.position.x += mouse.x * 0.3;
+                player.position.y += mouse.y * 0.3;
+            }
             
-            // 翻滚
-            if (keys['KeyQ']) player.rotation.z += 0.1;
-            if (keys['KeyE']) player.rotation.z -= 0.1;
+            // 摇杆控制（移动端）
+            if (joystick.active) {
+                player.position.x += joystick.x * speed;
+                player.position.y -= joystick.y * speed;
+            }
             
-            // 鼠标瞄准
-            player.position.x += mouse.x * 0.3;
-            player.position.y += mouse.y * 0.3;
+            // 自动射击
+            if (autoFire) {
+                shoot();
+            }
             
             // 限制范围
-            player.position.x = Math.max(-50, Math.min(50, player.position.x));
-            player.position.y = Math.max(-30, Math.min(30, player.position.y));
+            player.position.x = Math.max(-40, Math.min(40, player.position.x));
+            player.position.y = Math.max(-25, Math.min(25, player.position.y));
             
             // 相机跟随
             camera.position.x = player.position.x * 0.3;
@@ -485,7 +665,6 @@
                 const bullet = bullets[i];
                 bullet.position.add(bullet.velocity);
                 
-                // 移除超出范围的子弹
                 if (bullet.position.z < -500) {
                     scene.remove(bullet);
                     bullets.splice(i, 1);
@@ -495,7 +674,7 @@
         
         function updateEnemies() {
             // 生成敌人
-            if (Math.random() < 0.02) {
+            if (Math.random() < 0.025) {
                 createEnemy();
             }
             
@@ -509,19 +688,14 @@
                 for (let j = bullets.length - 1; j >= 0; j--) {
                     const bullet = bullets[j];
                     if (bullet.position.distanceTo(enemy.position) < 4) {
-                        // 爆炸效果
                         createExplosion(enemy.position);
-                        
-                        // 移除敌人和子弹
                         scene.remove(enemy);
                         scene.remove(bullet);
                         enemies.splice(i, 1);
                         bullets.splice(j, 1);
                         
-                        // 加分
                         score += 100;
                         document.getElementById('score-value').textContent = score;
-                        
                         break;
                     }
                 }
@@ -580,7 +754,6 @@
         }
         
         function restartGame() {
-            // 清理
             enemies.forEach(e => scene.remove(e));
             bullets.forEach(b => scene.remove(b));
             particles.forEach(p => scene.remove(p));
